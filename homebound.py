@@ -25,6 +25,7 @@ shop = pygame.image.load('./assets/images/shop.png')
 coin_icon = pygame.image.load('./assets/icons/coins.png')
 close_icon = pygame.image.load('./assets/icons/cross.png')
 mosquito_img = pygame.image.load('./assets/images/mosquito.png')
+rice_drop_bg = pygame.image.load('./assets/images/background_v6.jpg')
 
 # load audios
 mixer.music.load("./assets/audio/bg.mp3")
@@ -32,6 +33,7 @@ knock = mixer.Sound("./assets/audio/knock.mp3")
 mosquito_sound = mixer.Sound("./assets/audio/mosquito.mp3")
 impact_sound = mixer.Sound("./assets/audio/impact.mp3")
 impact_channel = pygame.mixer.Channel(2)
+explosion_sound = mixer.Sound('./assets/audio/explosion.wav')
 
 # play bg music infinitely
 mixer.music.set_volume(0.3)
@@ -39,10 +41,10 @@ mixer.music.play(-1)
 
 # icons
 # get width and height of screen
-x, y = screen.get_size()
+SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
 
 shop_icon_rect = shop_icon.get_rect()
-shop_icon_rect.topright = (x - 100, 10)
+shop_icon_rect.topright = (SCREEN_WIDTH - 100, 10)
 
 coin_rect = coin_icon.get_rect()
 coin_rect.midright = (
@@ -50,7 +52,10 @@ coin_rect.midright = (
     shop_icon_rect.centery
 )
 
-close_rect = close_icon.get_rect(topright=(x - 15, 10))
+close_rect = close_icon.get_rect(topright=(SCREEN_WIDTH - 15, 10))
+
+# scale bedroom
+bedroom = pygame.transform.scale(bedroom, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # initialise variables
 font_colour = (0, 0, 0)
@@ -72,13 +77,14 @@ REAL_SECONDS_PER_TICK = 5
 GAME_MINUTES_PER_TICK = 15
 time_passed = 0
 mosquito_sound_playing = True
+minigame_played = False
 
 mosquitoes = []
 mosquito_rects = []
 mosquito_active = False
 MOSQUITO_COIN_REWARD = 5
 
-# helper function
+# helper functions
 def spawn_mosquitoes():
     global mosquitoes, mosquito_rects, mosquito_active
 
@@ -89,8 +95,8 @@ def spawn_mosquitoes():
 
     for _ in range(n):
         rect = mosquito_img.get_rect()
-        rect.x = random.randint(50, x - rect.width - 50)
-        rect.y = random.randint(80, y - rect.height - 50)
+        rect.x = random.randint(50, SCREEN_WIDTH - rect.width - 50)
+        rect.y = random.randint(80, SCREEN_HEIGHT - rect.height - 50)
 
         mosquitoes.append(mosquito_img)
         mosquito_rects.append(rect)
@@ -104,7 +110,7 @@ while running:
     dt = clock.tick() / 1000
 
     # scale and set bg image
-    scaled_bg = pygame.transform.scale(current_bg, (x, y))
+    scaled_bg = pygame.transform.scale(current_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
     screen.blit(scaled_bg, (0, 0))
 
     # display close button
@@ -118,7 +124,7 @@ while running:
         # user clicked
         if event.type == pygame.MOUSEBUTTONDOWN:
             # user clicked on play button
-            if (x / 2 + 200) <= mouse[0] <= (x / 2 + 200 + 140) and (y/2 - 150) <= mouse[1] <= (y / 2 - 150 + 60):
+            if (SCREEN_WIDTH / 2 + 200) <= mouse[0] <= (SCREEN_WIDTH / 2 + 200 + 140) and (SCREEN_HEIGHT/2 - 150) <= mouse[1] <= (SCREEN_HEIGHT / 2 - 150 + 60):
                 current_bg = room
                 show_button = False
                 play = True
@@ -201,10 +207,282 @@ while running:
                 current_bg = agent2
             elif (game_minutes == (19 * 60)):
                 current_bg = dinner
-            elif ((game_minutes >= (19 * 60 + 15)) and (game_minutes < (21 * 60))):
-                # rice drop game goes here 
-                # rmb to remove print statement
-                print("rice drop placeholder")
+            elif (((game_minutes >= (19 * 60 + 15)) and (game_minutes < (21 * 60))) and minigame_played == False):
+                background = pygame.image.load("./assets/images/background_v6.jpg")
+                background = pygame.transform.scale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+                class Player:
+                    def __init__(self, img):
+                        self.x = 110
+                        self.y = 700
+                        self.health = 100
+
+                        self.img = pygame.image.load("./assets/images/Paper.jpeg").convert_alpha()
+                        player_width = 64
+                        player_height = 64
+                        self.img = pygame.transform.scale(self.img, (player_width, player_height))
+                        self.rect = pygame.Rect(self.x, self.y, player_width, player_height)
+
+                    def draw(self, x, y):
+                        screen.blit(self.img, (x, y))
+                        self.rect.x = self.x
+                        self.rect.y = self.y
+
+                # Player
+                paper = Player("Paper.jpeg")
+                player_rect = paper.rect
+
+                class RHand:
+                    def __init__(self, img):
+                        self.x = paper.x
+                        self.y = paper.y
+                        self.health = 10
+                        self.img = pygame.image.load("./assets/images/hand.png").convert_alpha()
+                        RHand_width = 128
+                        RHand_height = 128
+                        self.img = pygame.transform.scale(self.img, (RHand_width, RHand_height))
+                        self.rect = pygame.Rect(self.x, self.y, RHand_width, RHand_height)
+
+                    def draw(self, x, y):
+                        screen.blit(self.img, (x, y))
+                        self.rect.x = self.x
+                        self.rect.y = self.y
+
+                # Hand
+                hand = RHand("hand.png")
+                hand.x = paper.x
+                hand.y = paper.y
+                RHandX_change = 2.1
+                RHandY_change = 0
+                # Ready - you can't see the bullet on the screen
+                RHand_state = "ready"
+
+                # Fire - Bullet is currently moving
+                def RHand(x, y):
+                    global RHand_state
+                    RHand_state = "fire"
+                    hand.draw(hand.x + 64, hand.y)
+
+                def isCollision():
+                    if hand.rect.colliderect(ant.rect):
+                        return True
+                    else:
+                        return False
+
+                class Ant:
+                    def __init__(self, x, y):
+                        self.x = x
+                        self.y = y
+                        self.speed = 0.5
+                        self.health = 10
+                        self.width = 64
+                        self.height = 64
+                        self.img = pygame.image.load("./assets/images/beginner_ant.png").convert_alpha()
+                        self.img = pygame.transform.scale(self.img, (self.width, self.height))
+                        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+                    def draw(self):
+                        screen.blit(self.img, (self.x, self.y))
+                        self.rect.x = self.x
+                        self.rect.y = self.y
+
+                    def chase_player(self, player):
+                        dx = player.x - self.x
+                        dy = player.y - self.y
+
+                        if dx > 0:
+                            self.x += self.speed
+                        if dx < 0:
+                            self.x -= self.speed
+                        if dy > 0:
+                            self.y += self.speed
+                        if dy < 0:
+                            self.y -= self.speed
+
+                # CREATE 10 ANTS
+                ants = []
+
+                for i in range(10):
+                    x = random.randint(350, 1450)
+                    y = random.randint(0, 400)
+                    ants.append(Ant(x, y))
+
+                class Rice:
+                    def __init__(self, x, y):
+                        self.x = x
+                        self.y = y
+                        self.speed = 1
+                        self.health = 10
+                        self.width = 64
+                        self.height = 64
+                        self.img = pygame.image.load("./assets/images/Rice.png").convert_alpha()
+                        self.img = pygame.transform.scale(self.img, (self.width, self.height))
+                        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+                    def draw(self):
+                        screen.blit(self.img, (self.x, self.y))
+                        self.rect.x = self.x
+                        self.rect.y = self.y
+
+                    def run_away(self, player):
+                        dx = player.x - self.x
+                        dy = player.y - self.y
+
+                        if dx > 0:
+                            self.x -= self.speed
+                        if dx < 0:
+                            self.x += self.speed
+                        if dy > 0:
+                            self.y -= self.speed
+                        if dy < 0:
+                            self.y += self.speed
+
+                # CREATE 10 RICE
+                rices = []
+
+                for i in range(10):
+                    x = random.randint(0, 1450)
+                    y = random.randint(0, 700)
+                    rices.append(Rice(x, y))
+
+                # Score
+                score_value = 0
+                minigame_font = pygame.font.Font("freesansbold.ttf", 32)
+                textX = 10
+                textY = 10
+
+                def show_score(x, y):
+                    score = minigame_font.render("Score: " + str(score_value), True, (255, 255, 255))
+                    screen.blit(score, (x, y))
+
+                def draw_RHand_button():
+                    RHand_Button = pygame.image.load("./assets/images/RHand Button.png")
+                    RHand_Button_img = pygame.transform.scale(RHand_Button, (200, 200))
+                    screen.blit(RHand_Button_img, (1200, 570))
+
+                def draw_RHand_button_Grey():
+                    RHand_Button = pygame.image.load("./assets/images/RHand Button Grey.png")
+                    RHand_Button_img = pygame.transform.scale(RHand_Button, (200, 200))
+                    screen.blit(RHand_Button_img, (1200, 570))
+
+                # GAME LOOP
+                game_result = None
+                minigame_running = True
+                while minigame_running:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            minigame_running = False
+
+                    # Player boundaries
+                    if paper.x <= 0:
+                        paper.x = 0
+                    elif paper.x >= 1500:
+                        paper.x = 1500
+
+                    if paper.y <= 0:
+                        paper.y = 0
+                    elif paper.y >= 750:
+                        paper.y = 750
+
+                    # Rice boundaries
+                    for rice in rices:
+                        if rice.x <= 0:
+                            rice.x = 0
+                        elif rice.x >= 1500:
+                            rice.x = 1500
+                        if rice.y <= 0:
+                            rice.y = 0
+                        elif rice.y >= 750:
+                            rice.y = 750
+
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_LEFT]:
+                        paper.x -= 2
+
+                    if keys[pygame.K_c]:
+                        if RHand_state == "ready":
+                            Hand_sound = mixer.Sound('./assets/audio/laser.wav')
+                            Hand_sound.play()
+                            hand.x = paper.x
+                            hand.y = paper.y
+                            RHand(hand.x, hand.y)
+
+                    if keys[pygame.K_RIGHT]:
+                        paper.x += 2
+
+                    if keys[pygame.K_UP]:
+                        paper.y -= 2
+
+                    if keys[pygame.K_DOWN]:
+                        paper.y += 2
+
+                    screen.blit(background, (0, 0))
+                    draw_RHand_button()
+                    paper.draw(paper.x, paper.y)
+
+                    for ant in ants:
+                        ant.chase_player(paper)
+                        ant.draw()
+                        if paper.rect.colliderect(ant.rect):
+                            paper.health -= 10
+                            ant.health -= 10
+                            for i in range(1):
+                                x = random.randint(0, 1450)
+                                y = random.randint(0, 700)
+                                ants.append(Ant(x, y))
+                        # Collision (RHand with ant)
+                        collision = isCollision()
+                        if collision:
+                            explosion_sound = mixer.Sound('./assets/audio/explosion.wav')
+                            explosion_sound.play()
+                            hand.x = paper.x
+                            hand.y = paper.y
+                            hand.health -= 10
+                            RHand_state = "ready"
+                            ant.health -= 10
+                            score_value += 10
+                            for i in range(1):
+                                x = random.randint(1300, 1450)
+                                y = random.randint(0, 100)
+                                ants.append(Ant(x, y))
+
+                        if ant.health <= 0:
+                            ants.remove(ant)
+
+                    for rice in rices:
+                        rice.draw()
+                        if paper.rect.colliderect(rice.rect):
+                            rice.health -= 1
+
+                        if rice.health <= 0:
+                            score_value += 10
+                            rices.remove(rice)
+
+                    # Bullet movement
+                    if hand.x >= 1450:
+                        draw_RHand_button()
+                        hand.x = paper.x
+                        RHand_state = "ready"
+
+                    if RHand_state == "fire":
+                        RHand(hand.x, hand.y)
+                        hand.x += RHandX_change
+                        draw_RHand_button_Grey()
+
+                    # Win and Lose Condition
+                    if paper.health <= 0:
+                        game_minutes = 20 * 60 + 45
+                        minigame_played = True
+                        break
+                    
+                    if score_value >= 100:
+                        coins += 10
+                        game_minutes = 20 * 60 + 45
+                        minigame_played = True
+                        break
+
+                    show_score(textX, textY)
+                    pygame.display.update()
             elif game_minutes == (21 * 60):
                 current_bg = bedroom
                 if not mosquito_active:
@@ -241,9 +519,11 @@ while running:
             mosquitoes.clear()
             mosquito_rects.clear()
 
+            minigame_played = False
+
         # text on day_bg
         day_surface = font.render(f"Day {day}", True, (0, 0, 0))
-        day_rect = day_surface.get_rect(center=(x // 2, y // 2))
+        day_rect = day_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
 
         # display day text on day_bg
         if current_bg == day_bg and show_day_text:
@@ -263,8 +543,8 @@ while running:
 
     # show play button
     if (show_button == True):
-        pygame.draw.rect(screen, (255, 255, 255), [x/2 + 200, y/2 - 150, 140, 60])
-        screen.blit(text, (x/2 + 230, y/2 - 150))
+        pygame.draw.rect(screen, (255, 255, 255), [SCREEN_WIDTH/2 + 200, SCREEN_HEIGHT/2 - 150, 140, 60])
+        screen.blit(text, (SCREEN_WIDTH/2 + 230, SCREEN_HEIGHT/2 - 150))
 
     # update screen
     pygame.display.update()
