@@ -1,5 +1,6 @@
 # required dependencies
 import pygame
+import random
 from pygame import mixer
 
 # initialise pygame
@@ -23,10 +24,14 @@ shop_icon = pygame.image.load('./assets/icons/shop_icon.png')
 shop = pygame.image.load('./assets/images/shop.png')
 coin_icon = pygame.image.load('./assets/icons/coins.png')
 close_icon = pygame.image.load('./assets/icons/cross.png')
+mosquito_img = pygame.image.load('./assets/images/mosquito.png')
 
 # load audios
 mixer.music.load("./assets/audio/bg.mp3")
 knock = mixer.Sound("./assets/audio/knock.mp3")
+mosquito_sound = mixer.Sound("./assets/audio/mosquito.mp3")
+impact_sound = mixer.Sound("./assets/audio/impact.mp3")
+impact_channel = pygame.mixer.Channel(2)
 
 # play bg music infinitely
 mixer.music.set_volume(0.3)
@@ -66,6 +71,31 @@ game_minutes = 17 * 60
 REAL_SECONDS_PER_TICK = 5
 GAME_MINUTES_PER_TICK = 15
 time_passed = 0
+mosquito_sound_playing = True
+
+mosquitoes = []
+mosquito_rects = []
+mosquito_active = False
+MOSQUITO_COIN_REWARD = 5
+
+# helper function
+def spawn_mosquitoes():
+    global mosquitoes, mosquito_rects, mosquito_active
+
+    mosquitoes.clear()
+    mosquito_rects.clear()
+
+    n = random.randint(1, 5)
+
+    for _ in range(n):
+        rect = mosquito_img.get_rect()
+        rect.x = random.randint(50, x - rect.width - 50)
+        rect.y = random.randint(80, y - rect.height - 50)
+
+        mosquitoes.append(mosquito_img)
+        mosquito_rects.append(rect)
+    
+    mosquito_active = True
 
 # game loop
 running = True
@@ -102,7 +132,19 @@ while running:
                 elif close_rect.collidepoint(event.pos):
                     running = False
                     pygame.quit()
-                
+                elif mosquito_active:
+                    for rect in mosquito_rects[:]:
+                        if rect.collidepoint(event.pos):
+                            impact_channel.play(impact_sound)
+                            mosquito_rects.remove(rect)
+                            coins += MOSQUITO_COIN_REWARD
+                            break
+                    
+                    if len(mosquito_rects) == 0:
+                        mosquito_active = False
+                        mosquito_sound.stop()
+                        mosquito_sound_playing = False
+
         # user pressed the escape key
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE and current_bg == shop:
@@ -163,8 +205,19 @@ while running:
                 # rice drop game goes here 
                 # rmb to remove print statement
                 print("rice drop placeholder")
+            elif game_minutes == (21 * 60):
+                current_bg = bedroom
+                if not mosquito_active:
+                    spawn_mosquitoes()
             elif ((game_minutes >= (21 * 60)) and (game_minutes < (23 * 60))):
                 current_bg = bedroom 
+
+                if mosquito_sound_playing:
+                    mosquito_sound.play()
+
+        if mosquito_active:
+            for rect in mosquito_rects:
+                screen.blit(mosquito_img, rect)
         
         # handle new day
         if game_minutes >= 23*60 and not show_day_text:
@@ -172,6 +225,8 @@ while running:
             show_day_text = True
             day_text_timer = 0
             current_bg = day_bg
+            mosquito_sound.stop()
+            mosquito_sound_playing = False
         
         # reset variables for the new day
         if show_day_text and day_text_timer >= DAY_TEXT_DURATION:
@@ -181,6 +236,10 @@ while running:
             game_minutes = 17 * 60
             time_passed = 0
             current_bg = room
+
+            mosquito_active = False
+            mosquitoes.clear()
+            mosquito_rects.clear()
 
         # text on day_bg
         day_surface = font.render(f"Day {day}", True, (0, 0, 0))
