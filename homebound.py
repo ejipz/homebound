@@ -22,6 +22,7 @@ day_bg = pygame.image.load('./assets/images/day.png')
 shop_icon = pygame.image.load('./assets/icons/shop_icon.png')
 shop = pygame.image.load('./assets/images/shop.png')
 coin_icon = pygame.image.load('./assets/icons/coins.png')
+close_icon = pygame.image.load('./assets/icons/cross.png')
 
 # load audios
 mixer.music.load("./assets/audio/bg.mp3")
@@ -36,13 +37,15 @@ mixer.music.play(-1)
 x, y = screen.get_size()
 
 shop_icon_rect = shop_icon.get_rect()
-shop_icon_rect.topright = (x - 20, 10)
+shop_icon_rect.topright = (x - 100, 10)
 
 coin_rect = coin_icon.get_rect()
 coin_rect.midright = (
     shop_icon_rect.left - 120, 
     shop_icon_rect.centery
 )
+
+close_rect = close_icon.get_rect(topright=(x - 15, 10))
 
 # initialise variables
 font_colour = (0, 0, 0)
@@ -60,7 +63,7 @@ current_bg = bg
 previous_bg = room
 play = False
 game_minutes = 17 * 60
-REAL_SECONDS_PER_TICK = 10
+REAL_SECONDS_PER_TICK = 5
 GAME_MINUTES_PER_TICK = 15
 time_passed = 0
 
@@ -73,6 +76,9 @@ while running:
     # scale and set bg image
     scaled_bg = pygame.transform.scale(current_bg, (x, y))
     screen.blit(scaled_bg, (0, 0))
+
+    # display close button
+    screen.blit(close_icon, close_rect)
 
     # handle events
     for event in pygame.event.get():
@@ -93,7 +99,10 @@ while running:
                 if shop_icon_rect.collidepoint(event.pos):
                     previous_bg = current_bg
                     current_bg = shop
-
+                elif close_rect.collidepoint(event.pos):
+                    running = False
+                    pygame.quit()
+                
         # user pressed the escape key
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE and current_bg == shop:
