@@ -1,4 +1,5 @@
-# Homebound
+## ![Homebound](assets/images/banner.png)
+
 Homebound is a cozy and humorous indie game set in Singapore that invites players to experience the everyday routine of coming home from a different perspective. By transforming ordinary household moments into interactive adventures, Homebound encourages players to slow down, look around and discover the humour, warmth and hidden magic that often go unnoticed in the rush of daily life.
 
 # Features
@@ -33,4 +34,10 @@ Homebound is a cozy and humorous indie game set in Singapore that invites player
 
 ## Usage
 1. Click the 'Play' button on the home page to start the game.
-2. Have fun exploring and playing the minigames!
+2. Have fun exploring and playing the minigames!  
+
+# About the Team
+Homebound was developed by a team of students as part of BuildingBlocs Game Jam 2026. The project was a collaborative effort by:
+- Cyrus Tng
+- Jolin
+- Lee Jia Hui
